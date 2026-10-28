@@ -2,9 +2,21 @@ import { Ollama } from "ollama";
 
 /** Everything runs against a local Ollama server. No API keys involved. */
 
+// OLLAMA_HOST is Ollama's own standard variable, so it's shared with the CLI.
+// The app's other settings use a MODULAR_ prefix so that generic OLLAMA_* exports
+// in a shell profile (meant for other tools) don't silently change this app.
 export const OLLAMA_HOST = (process.env.OLLAMA_HOST || "http://127.0.0.1:11434").replace(/\/$/, "");
-export const NUM_CTX = Number(process.env.OLLAMA_NUM_CTX) || 16_384;
-export const KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || "15m";
+
+const DEFAULT_NUM_CTX = 16_384;
+/** Context window to request. Ollama reserves memory for all of it up front (~147 KB per token for qwen3:8b). */
+export const NUM_CTX = parseNumCtx(process.env.MODULAR_NUM_CTX);
+export const KEEP_ALIVE = process.env.MODULAR_KEEP_ALIVE || "15m";
+const MODEL_OVERRIDE = process.env.MODULAR_MODEL || null;
+
+function parseNumCtx(value: string | undefined): number {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 2048 && n <= 262_144 ? n : DEFAULT_NUM_CTX;
+}
 
 /** Models that handle tool calling well, in order of preference, used to pick a default. */
 const PREFERRED = ["qwen3", "gpt-oss", "llama3.1", "llama3.2", "qwen2.5", "mistral-nemo", "mistral"];
@@ -83,15 +95,14 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
       running: false,
       version: null,
       models: [],
-      defaultModel: process.env.OLLAMA_MODEL || null,
+      defaultModel: MODEL_OVERRIDE,
       error: (err as Error).message,
     };
   }
 }
 
 function pickDefaultModel(models: LocalModel[]): string | null {
-  const fromEnv = process.env.OLLAMA_MODEL;
-  if (fromEnv) return fromEnv;
+  if (MODEL_OVERRIDE) return MODEL_OVERRIDE;
   const withTools = models.filter((m) => m.tools);
   for (const prefix of PREFERRED) {
     const match = withTools.find((m) => m.name.startsWith(prefix) && !m.name.includes("coder"));

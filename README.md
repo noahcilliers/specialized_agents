@@ -23,7 +23,9 @@ An MVP of a different take on personal AI agents. Instead of one general agent t
    npm run dev
    ```
 
-Open http://localhost:3000. On first run the app seeds four example agents (Calendar Keeper, Event Planner, Grocery Runner, Home Watch). Agents without a model of their own use the default: `OLLAMA_MODEL` if set, otherwise the best installed model with tool support. Each agent can pick a different local model on its Configure tab. Other settings (Ollama host, context size, keep-alive) are in `.env.example`.
+Open http://localhost:3000. On first run the app seeds four example agents (Calendar Keeper, Event Planner, Grocery Runner, Home Watch). Agents without a model of their own use the default: `MODULAR_MODEL` if set, otherwise the best installed model with tool support. Each agent can pick a different local model on its Configure tab. Other settings (Ollama host, context size, keep-alive) are in `.env.example`.
+
+**Memory:** the app asks Ollama for a 16K-token context window by default, about 7.8 GB in total with qwen3:8b (versus 9.9 GB at 32K). Ollama reserves memory for the whole window up front, so a larger `MODULAR_NUM_CTX` costs memory even when chats are short. Ollama frees the model 15 minutes after the last message (`MODULAR_KEEP_ALIVE`), or immediately with `ollama stop qwen3:8b`.
 
 **Speed:** with deep thinking off (the default), qwen3:8b on an M-series Mac answers in a few seconds. Deep thinking ("Think before answering" in an agent's settings) is more careful on tricky requests, but can take a minute or more per reply on a laptop.
 
